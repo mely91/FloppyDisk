@@ -2,12 +2,12 @@ CFLAGS := -g
 targets=server
 src = server.c
 objs = $(patsubst %.c,%.o,$(src))
-libs = -L../lib -ldagame
+libs = -L../lib -lecho -lpthread
 
 all: $(targets)
 .PHONY: all
 
-server: $(objs) ../lib/libdagame.a
+server: $(objs) ../lib/libecho.a
 	gcc $(CFLAGS) -o server $(objs) $(libs)
 
 $(objs) : $(src)
