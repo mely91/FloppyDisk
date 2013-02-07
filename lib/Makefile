@@ -1,13 +1,13 @@
 CFLAGS := -g
-targets = libecho.a
+targets = libdagame.a
 src = $(wildcard *.c)
 objs = $(patsubst %.c,%.o,$(src))
 
 all: $(targets)
 .PHONY : all
 
-libecho.a: $(objs)
-	ar -c -r libecho.a $(objs)
+libdagame.a: $(objs)
+	ar -c -r libdagame.a $(objs)
 
 $(objs) : $(src)
 
