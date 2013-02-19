@@ -138,6 +138,7 @@ proto_session_hdr_unmarshall_blen(Proto_Session *s)
 {
     printf(" inside proto_session_hdr_unmarshall_blen\n");
   ntohl(s->shdr.blen);
+  return 0;
 }
 
 static void
@@ -151,8 +152,9 @@ proto_session_hdr_marshall_type(Proto_Session *s, Proto_Msg_Types t)
 static int
 proto_session_hdr_unmarshall_version(Proto_Session *s)
 {
-    printf("inside proto_session_hdr_unmarshall_version\n");
+  printf("inside proto_session_hdr_unmarshall_version\n");
   ntohl(s->shdr.version);
+  return 0;
 }
 
 extern Proto_Msg_Types

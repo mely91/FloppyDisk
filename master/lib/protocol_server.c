@@ -26,6 +26,7 @@
 #include <strings.h>
 #include <errno.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "net.h"
 #include "protocol.h"
@@ -67,6 +68,7 @@ extern int
 proto_server_set_session_lost_handler(Proto_MT_Handler h)
 {
   Proto_Server.session_lost_handler = h;
+  return 0;
 }
 
 extern int
@@ -243,7 +245,7 @@ void *
 proto_server_rpc_listen(void *arg)
 {
   int fd = Proto_Server.RPCListenFD;
-  unsigned long connfd;
+  FDType connfd;
   pthread_t tid;
   
   if (net_listen(fd) < 0) {

@@ -26,6 +26,7 @@
 #include <strings.h>
 #include <errno.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "protocol.h"
 #include "protocol_utils.h"
@@ -63,6 +64,7 @@ proto_client_set_session_lost_handler(Proto_Client_Handle ch, Proto_MT_Handler h
 { printf("proto_client_set_session_lost_handler\n");
   Proto_Client *c = ch;
   c->session_lost_handler = h;
+  return 0;
 }
 
 extern int
@@ -135,8 +137,8 @@ proto_client_event_dispatcher(void * arg)
     }
   }
  leave:
-  proto_client_session_lost_default_hdlr(&s); 
- close(s->fd);
+  proto_client_session_lost_default_hdlr(s); 
+  close(s->fd);
   return NULL;
 }
 
