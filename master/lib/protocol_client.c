@@ -31,6 +31,7 @@
 #include "protocol_utils.h"
 #include "protocol_client.h"
 
+#define FIXME
 
 typedef struct {
   Proto_Session rpc_session;
@@ -44,7 +45,7 @@ typedef struct {
 
 extern Proto_Session *
 proto_client_rpc_session(Proto_Client_Handle ch)
-{
+{ printf("proto_client_rpc_session\n");
   Proto_Client *c = ch;
   return &(c->rpc_session);
 }
@@ -52,13 +53,14 @@ proto_client_rpc_session(Proto_Client_Handle ch)
 extern Proto_Session *
 proto_client_event_session(Proto_Client_Handle ch)
 {
+    printf("proto_client_event_session");
   Proto_Client *c = ch;
   return &(c->event_session);
 }
 
 extern int
 proto_client_set_session_lost_handler(Proto_Client_Handle ch, Proto_MT_Handler h)
-{
+{ printf("proto_client_set_session_lost_handler\n");
   Proto_Client *c = ch;
   c->session_lost_handler = h;
 }
@@ -67,15 +69,18 @@ extern int
 proto_client_set_event_handler(Proto_Client_Handle ch, Proto_Msg_Types mt,
 			       Proto_MT_Handler h)
 {
-  int i;
+    printf("inside proto_client_set_event_handler\n");
+     int i;
   Proto_Client *c = ch;
 
   if (mt>PROTO_MT_EVENT_BASE_RESERVED_FIRST && 
       mt<PROTO_MT_EVENT_BASE_RESERVED_LAST) {
     i=mt - PROTO_MT_EVENT_BASE_RESERVED_FIRST - 1;
-    ADD CODE
+    c->base_event_handlers[i]=h;
+      printf("succes proto_client_set_event_handler \n");
     return 1;
   } else {
+      printf("returned -1 inside proto_client_set_event_handler \n");
     return -1;
   }
 }
@@ -100,7 +105,7 @@ proto_client_event_null_handler(Proto_Session *s)
 
 static void *
 proto_client_event_dispatcher(void * arg)
-{
+{printf("inside proto_clietnt_event_dispatcher");
   Proto_Client *c;
   Proto_Session *s;
   Proto_Msg_Types mt;
@@ -108,25 +113,30 @@ proto_client_event_dispatcher(void * arg)
   int i;
 
   pthread_detach(pthread_self());
+  printf("Inside pthread_detach\n");
+  c = arg;
+  s = &c->event_session;
 
-  c = ADD CODE
-  s = ADD CODE
 
   for (;;) {
     if (proto_session_rcv_msg(s)==1) {
       mt = proto_session_hdr_unmarshall_type(s);
       if (mt > PROTO_MT_EVENT_BASE_RESERVED_FIRST && 
 	  mt < PROTO_MT_EVENT_BASE_RESERVED_LAST) {
-	ADD CODE
+	i=mt - PROTO_MT_EVENT_BASE_RESERVED_FIRST - 1;
+	  hdlr=c->base_event_handlers[i];
+
+         
 	if (hdlr(s)<0) goto leave;
       }
     } else {
-      ADD CODE
+      //
       goto leave;
     }
   }
  leave:
-  close(s->fd);
+  proto_client_session_lost_default_hdlr(&s); 
+ close(s->fd);
   return NULL;
 }
 
@@ -142,12 +152,12 @@ proto_client_init(Proto_Client_Handle *ch)
 
   proto_client_set_session_lost_handler(c, 
 			      	proto_client_session_lost_default_hdlr);
-
+  
   for (mt=PROTO_MT_EVENT_BASE_RESERVED_FIRST+1;
        mt<PROTO_MT_EVENT_BASE_RESERVED_LAST; mt++)
-    ADD CODE
-
-  *ch = c;
+    proto_client_set_event_handler(c, mt , proto_client_event_null_handler);
+    printf("succes inside proto_client_init\n");
+    *ch = c;
   return 1;
 }
 
@@ -155,9 +165,10 @@ int
 proto_client_connect(Proto_Client_Handle ch, char *host, PortType port)
 {
   Proto_Client *c = (Proto_Client *)ch;
-
+  printf("tryies proto_client_connect to rpc\n");
   if (net_setup_connection(&(c->rpc_session.fd), host, port)<0) 
     return -1;
+    printf("tryies proto_client_connect to event\n");
 
   if (net_setup_connection(&(c->event_session.fd), host, port+1)<0) 
     return -2; 
@@ -175,51 +186,56 @@ proto_client_connect(Proto_Client_Handle ch, char *host, PortType port)
 
 static void
 marshall_mtonly(Proto_Session *s, Proto_Msg_Types mt) {
-  Proto_Msg_Hdr h;
-  
+    printf(" inside marshall_mtonly \n");
+Proto_Msg_Hdr h;
   bzero(&h, sizeof(h));
   h.type = mt;
   proto_session_hdr_marshall(s, &h);
+   printf("exits marshall_mtonly \n"); 
 };
 
 // all rpc's are assume to only reply only with a return code in the body
 // eg.  like the null_mes
 static int 
 do_generic_dummy_rpc(Proto_Client_Handle ch, Proto_Msg_Types mt)
-{
+    { printf("inside do_generic_rpc\n");
   int rc;
   Proto_Session *s;
   Proto_Client *c = ch;
 
-  s = ADD CODE
+       
+  s = &c->rpc_session;
   // marshall
 
   marshall_mtonly(s, mt);
-  rc = proto_session_ADD CODE
+  rc = proto_session_rpc(s);
 
   if (rc==1) {
     proto_session_body_unmarshall_int(s, 0, &rc);
   } else {
-    ADD CODE
+    c->session_lost_handler(s);
+    close(s->fd);
+    // fprintf(stderr, "Error: Unable to do_generic (%d)\n", errno);
+
   }
   
   return rc;
 }
 extern int 
 proto_client_hello(Proto_Client_Handle ch)
-{
+    {printf("inside proto_client_hello\n");
   return do_generic_dummy_rpc(ch,PROTO_MT_REQ_BASE_HELLO);  
 }
 
 extern int 
 proto_client_move(Proto_Client_Handle ch, char data)
-{
+    { printf("inside proto_client_move\n");
   return do_generic_dummy_rpc(ch,PROTO_MT_REQ_BASE_MOVE);  
 }
 
 extern int 
 proto_client_goodbye(Proto_Client_Handle ch)
-{
+    { printf("inside_proto_goodbye\n");
   return do_generic_dummy_rpc(ch,PROTO_MT_REQ_BASE_GOODBYE);  
 }
 

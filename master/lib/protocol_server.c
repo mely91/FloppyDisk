@@ -32,6 +32,8 @@
 #include "protocol_utils.h"
 #include "protocol_server.h"
 
+#define FIXME
+
 #define PROTO_SERVER_MAX_EVENT_SUBSCRIBERS 1024
 
 struct {
@@ -75,8 +77,7 @@ proto_server_set_req_handler(Proto_Msg_Types mt, Proto_MT_Handler h)
   if (mt>PROTO_MT_REQ_BASE_RESERVED_FIRST &&
       mt<PROTO_MT_REQ_BASE_RESERVED_LAST) {
     i = mt - PROTO_MT_REQ_BASE_RESERVED_FIRST - 1;
-
-    ADD CODE
+    Proto_Server.base_req_handlers[i]=h;
     return 1;
   } else {
     return -1;
@@ -94,13 +95,15 @@ proto_server_record_event_subscriber(int fd, int *num)
   if (Proto_Server.EventLastSubscriber < PROTO_SERVER_MAX_EVENT_SUBSCRIBERS
       && Proto_Server.EventSubscribers[Proto_Server.EventLastSubscriber]
       ==-1) {
-    ADD CODE
+    Proto_Server.EventSubscribers[Proto_Server.EventLastSubscriber]=fd;
+    *num = Proto_Server.EventLastSubscriber;
+    Proto_Server.EventLastSubscriber++;
     rc = 1;
   } else {
     int i;
     for (i=0; i< PROTO_SERVER_MAX_EVENT_SUBSCRIBERS; i++) {
       if (Proto_Server.EventSubscribers[i]==-1) {
-	ADD CODE
+	Proto_Server.EventSubscribers[i]=fd;
 	*num=i;
 	rc=1;
       }
@@ -124,14 +127,13 @@ proto_server_event_listen(void *arg)
   }
 
   for (;;) {
-    connfd = ADD CODE
+    connfd = net_accept(fd);
     if (connfd < 0) {
       fprintf(stderr, "Error: EventListen accept failed (%d)\n", errno);
     } else {
       int i;
       fprintf(stderr, "EventListen: connfd=%d -> ", connfd);
-
-      if (ADD CODE<0) {
+      if (proto_server_record_event_subscriber(connfd, &i)<0) {
 	fprintf(stderr, "oops no space for any more event subscribers\n");
 	close(connfd);
       } else {
@@ -151,17 +153,40 @@ proto_server_post_event(void)
 
   i = 0;
   num = Proto_Server.EventNumSubscribers;
+  
   while (num) {
+    // setup up the event session to the i the subscriber info
     Proto_Server.EventSession.fd = Proto_Server.EventSubscribers[i];
     if (Proto_Server.EventSession.fd != -1) {
       num--;
-      if (ADD CODE)<0) {
+      // we have an active subscriber
+      // so we need to send this subscriber the event message
+     
+      if (proto_session_send_msg(&Proto_Server.EventSession,0)<0) {
+	// handle failure (call lost event session handler)
+ 
+	close(Proto_Server.EventSession.fd);
+	Proto_Server.EventSubscribers[i] = -1; 	// remove the ith subscriber since we seem to have lost it
+	Proto_Server.EventNumSubscribers--;    // decrement the count of subscribers
+	Proto_Server.session_lost_handler(&Proto_Server.EventSession);
+      }
+     
+    }
+    i++;
+  }
+
+  
+
+
+#if 0
+      num--;
+      if (num<0) {
 	// must have lost an event connection
 	close(Proto_Server.EventSession.fd);
 	Proto_Server.EventSubscribers[i]=-1;
 	Proto_Server.EventNumSubscribers--;
-	Proto_Server.ADD CODE
-      } 
+	Proto_Server.EventLastSubscriber--;      
+       } 
       // FIXME: add ack message here to ensure that game is updated 
       // correctly everywhere... at the risk of making server dependent
       // on client behaviour  (use time out to limit impact... drop
@@ -169,6 +194,7 @@ proto_server_post_event(void)
     }
     i++;
   }
+#endif
   proto_session_reset_send(&Proto_Server.EventSession);
   pthread_mutex_unlock(&Proto_Server.EventSubscribersLock);
 }
@@ -193,8 +219,13 @@ proto_server_req_dispatcher(void * arg)
 	  pthread_self(), s.fd);
 
   for (;;) {
+
     if (proto_session_rcv_msg(&s)==1) {
-      ADD CODE
+      mt= proto_session_hdr_unmarshall_type(&s);
+      if(mt > PROTO_MT_REQ_BASE_RESERVED_FIRST &&
+	 mt < PROTO_MT_REQ_BASE_RESERVED_LAST) {
+	i= mt -PROTO_MT_REQ_BASE_RESERVED_FIRST - 1;
+	hdlr = Proto_Server.base_req_handlers[i];
 	if (hdlr(&s)<0) goto leave;
       }
     } else {
@@ -202,7 +233,7 @@ proto_server_req_dispatcher(void * arg)
     }
   }
  leave:
-  Proto_Server.ADD CODE
+  Proto_Server.session_lost_handler(&s);
   close(s.fd);
   return NULL;
 }
@@ -221,7 +252,7 @@ proto_server_rpc_listen(void *arg)
   }
 
   for (;;) {
-    connfd = ADD CODE
+    connfd = net_accept(fd);
     if (connfd < 0) {
       fprintf(stderr, "Error: proto_server_rpc_listen accept failed (%d)\n", errno);
     } else {
@@ -286,9 +317,10 @@ proto_server_init(void)
 
   proto_server_set_session_lost_handler(
 				     proto_session_lost_default_handler);
+
   for (i=PROTO_MT_REQ_BASE_RESERVED_FIRST+1; 
        i<PROTO_MT_REQ_BASE_RESERVED_LAST; i++) {
-    ADD CODE
+    proto_server_set_req_handler(i, proto_server_mt_null_handler);
   }
 
 
