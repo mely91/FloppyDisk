@@ -161,7 +161,7 @@ extern Proto_Msg_Types
 proto_session_hdr_unmarshall_type(Proto_Session *s)
 {
     printf("inside proto_session_hdr_unmarshall_type\n");
-  s->rhdr.type = ntohl(s->shdr.type);
+    return ntohl(s->rhdr.type);
 }
 
 extern void
@@ -209,7 +209,7 @@ extern int
 proto_session_body_unmarshall_ll(Proto_Session *s, int offset, long long *v)
 {
     printf("inside proto_session_body_unmarshall_ll\n");
-  if (s && ((s->rlen - (offset + sizeof(long long))) >=0 )) {
+    if (s && ((s->rlen - (offset + (int)sizeof(long long))) >=0 )) {
     *v = *((long long *)(s->rbuf + offset));
     *v = htonl(*v);
       printf("succesfull exit proto_session_body_unmarshall_ll\n");
@@ -235,7 +235,7 @@ proto_session_body_marshall_int(Proto_Session *s, int v)
 extern int 
 proto_session_body_unmarshall_int(Proto_Session *s, int offset, int *v)
 {printf("inside proto_session_body_unmarshall_int\n");
-  if (s && ((s->rlen  - (offset + sizeof(int))) >=0 )) {
+  if (s && ((s->rlen  - (offset + (int)sizeof(int))) >=0 )) {
     *v = *((int *)(s->rbuf + offset));
     *v = htonl(*v);
       printf("sucess proto_session_body_unmarshall_int\n");
@@ -261,7 +261,7 @@ proto_session_body_marshall_char(Proto_Session *s, char v)
 extern int 
 proto_session_body_unmarshall_char(Proto_Session *s, int offset, char *v)
 {printf("inside proto_session_body_unmarshall_char\n");
-  if (s && ((s->rlen - (offset + sizeof(char))) >= 0)) {
+  if (s && ((s->rlen - (offset + (int)sizeof(char))) >= 0)) {
     *v = s->rbuf[offset];
       printf("sucess proto_session_body_unmarshall_char\n");
     return offset + sizeof(char);
