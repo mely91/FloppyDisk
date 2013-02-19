@@ -132,12 +132,12 @@ proto_client_event_dispatcher(void * arg)
 	if (hdlr(s)<0) goto leave;
       }
     } else {
-      //
+    proto_client_session_lost_default_hdlr(s);   
       goto leave;
     }
   }
  leave:
-  proto_client_session_lost_default_hdlr(s); 
+  
   close(s->fd);
   return NULL;
 }
