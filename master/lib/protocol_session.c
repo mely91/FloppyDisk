@@ -373,3 +373,71 @@ proto_session_rpc(Proto_Session *s)
     printf("proto_session_rpc line before rc is returned\n");
   return rc;
 }
+
+#ifdef __AN_EARLY_XMAS_PRESENT__
+
+// rc < 0 on comm failures
+// rc == 1 indicates comm success
+extern  int
+proto_session_send_msg(Proto_Session *s, int reset)
+{
+  s->shdr.blen = htonl(s->slen);
+
+  // write request
+  if (net_writen(s->fd, &(s->shdr), sizeof(s->shdr)) != sizeof(s->shdr)) 
+    return -1;
+
+  if (s->slen) {
+    if (net_writen(s->fd, s->sbuf, s->slen) != s->slen) {
+      return -2;
+    }
+  }
+
+  if (proto_debug()) {
+    fprintf(stderr, "%p: proto_session_send_msg: SENT:\n", pthread_self());
+    proto_session_dump(s);
+  }
+
+  // communication was successfull 
+  if (reset) proto_session_reset_send(s);
+
+  return 1;
+}
+
+extern int
+proto_session_rcv_msg(Proto_Session *s)
+{
+  
+  proto_session_reset_receive(s);
+
+  // read reply
+  if (net_readn(s->fd, &(s->rhdr), sizeof(s->rhdr)) != sizeof(s->rhdr)) 
+    return -3;
+
+  s->rlen = ntohl(s->rhdr.blen);
+  if (s->rlen) {
+    if (s->rlen > PROTO_SESSION_BUF_SIZE || 
+	net_readn(s->fd, s->rbuf, s->rlen)!=s->rlen) {
+      return -4;
+    }
+  } 
+  if (proto_debug()) {
+    fprintf(stderr, "%p: proto_session_rcv_msg: RCVED:\n", pthread_self());
+    proto_session_dump(s);
+  }
+  return 1;
+}
+
+extern int
+proto_session_rpc(Proto_Session *s)
+{
+  int rc;
+  
+  rc = proto_session_send_msg(s,1);
+  if (rc==1) {
+    rc = proto_session_rcv_msg(s);
+  }
+  return rc;
+}
+
+#endif
