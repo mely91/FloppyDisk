@@ -100,12 +100,14 @@ proto_server_record_event_subscriber(int fd, int *num)
     Proto_Server.EventSubscribers[Proto_Server.EventLastSubscriber]=fd;
     *num = Proto_Server.EventLastSubscriber;
     Proto_Server.EventLastSubscriber++;
+    Proto_Server.EventNumSubscribers++;
     rc = 1;
   } else {
     int i;
     for (i=0; i< PROTO_SERVER_MAX_EVENT_SUBSCRIBERS; i++) {
       if (Proto_Server.EventSubscribers[i]==-1) {
 	Proto_Server.EventSubscribers[i]=fd;
+	Proto_Server.EventNumSubscribers++;
 	*num=i;
 	rc=1;
       }
