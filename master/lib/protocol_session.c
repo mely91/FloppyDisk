@@ -322,59 +322,6 @@ proto_session_body_unmarshall_bytes(Proto_Session *s, int offset, int len,
   return -1;
 }
 
-// rc < 0 on comm failures
-// rc == 1 indicates comm success
-extern  int
-proto_session_send_msg(Proto_Session *s, int reset)
-{printf("inside proto_session_send_msg\n");
-  s->shdr.blen = htonl(s->slen);
-
-  // write request
-  net_writen(s->fd, s->sbuf, s->slen);
-  if (proto_debug()) {
-    fprintf(stderr, "%p: proto_session_send_msg: SENT:\n", pthread_self());
-    proto_session_dump(s);
-  }
-
-  // communication was successfull 
-  if (reset) proto_session_reset_send(s);
-    printf("sucess proto_session_send_msg\n");
-  return 1;
-}
-
-extern int
-proto_session_rcv_msg(Proto_Session *s)
-{
-    printf("inside proto_session_rcv_msg\n");
-  proto_session_reset_receive(s);
-
-  // read reply
-  net_readn(s->fd, s->rbuf, s->rlen);
-    //proto_session_unmarshall HERERERERERE
-  if (proto_debug()) {
-    fprintf(stderr, "%p: proto_session_rcv_msg: RCVED:\n", pthread_self());
-    proto_session_dump(s);
-  }
-    printf("sucess proto_session_rcv_msg\n");
-  return 1;
-}
-
-extern int
-proto_session_rpc(Proto_Session *s)
-{  printf("inside proto_session_rpc\n");
-  int rc;
-
-  rc = proto_session_send_msg(s, 1);
-    printf("inside proto_session_rpc after rc = proto_session_send_msg(s, 1\n");
-	if (rc == 1) {
-		proto_session_rcv_msg(s);
-            printf("inside proto_session_rpc after proto_session_rcv_msg(s)\n");
-	}
-    printf("proto_session_rpc line before rc is returned\n");
-  return rc;
-}
-
-#ifdef __AN_EARLY_XMAS_PRESENT__
 
 // rc < 0 on comm failures
 // rc == 1 indicates comm success
@@ -440,4 +387,4 @@ proto_session_rpc(Proto_Session *s)
   return rc;
 }
 
-#endif
+
