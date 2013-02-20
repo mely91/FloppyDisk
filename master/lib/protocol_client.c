@@ -119,9 +119,14 @@ proto_client_event_dispatcher(void * arg)
   c = arg;
   s = &c->event_session;
 
+  fprintf(stderr, "About to enter infinite loop to process events:\n");
+  proto_session_dump(s);
 
   for (;;) {
     if (proto_session_rcv_msg(s)==1) {
+      fprintf(stderr, "Got a message on the event channel:\n");
+      proto_session_dump(s);
+
       mt = proto_session_hdr_unmarshall_type(s);
       if (mt > PROTO_MT_EVENT_BASE_RESERVED_FIRST && 
 	  mt < PROTO_MT_EVENT_BASE_RESERVED_LAST) {
@@ -132,7 +137,7 @@ proto_client_event_dispatcher(void * arg)
 	if (hdlr(s)<0) goto leave;
       }
     } else {
-    proto_client_session_lost_default_hdlr(s);   
+      proto_client_session_lost_default_hdlr(s);   
       goto leave;
     }
   }
